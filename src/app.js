@@ -2,24 +2,24 @@ var UI = require('ui');
 var Vector2 = require('vector2');
 var ajax = require('ajax');
 var Settings = require('settings');
+var d = Settings.data('data');
 
-var load = new UI.Card({
-  title: 'Loading...',
-});
-load.show();
-
-ajax(
-    {
-      url: 'https://student.sbhs.net.au/api/timetable/bells.json',
-      type: 'json'
-    },
-    function(data) {
-      Settings.data('data', data);
-    },
-    function(error) {
-      console.log('Error: ' + error);
-    }
-);
+//Update data
+var update = function() {
+  ajax(
+      {
+        url: 'https://student.sbhs.net.au/api/timetable/bells.json',
+        type: 'json'
+      },
+      function(data) {
+        Settings.data('data', data);
+        d = Settings.data('data');
+      },
+      function(error) {
+        console.log('Error: ' + error);
+      }
+  );
+};
 
 //24h to 12h
 var convertTime = function(time) {
@@ -35,6 +35,66 @@ var convertTime = function(time) {
   return time;
 };
 
+//MAIN
+var main = new UI.Card({
+  title: d.day + ' ' + d.week + d.weekType,
+  subtitle: 'Class starts\n' +
+            '--h --m --s',
+  status: {
+    separator: 'none',
+    color: 'white',
+    backgroundColor: 'black'
+  }
+});
+
+main.on('show', function() {
+  update();
+});
+
+main.show();
+
+var getCountdown = function() {
+  var today = new Date();
+  var classTime = new Date();
+  classTime.setMonth(parseInt(d.date.slice(5,7)));
+  classTime.setDate(parseInt(d.date.slice(8,10)));
+  var bName = 'Class';
+  var trans = false;
+  for (var i = 0; i < d.bells.length; i++) {
+    var bTime = d.bells[i].time;
+    bName = d.bells[i].bell;
+    if (bName == 'Transition') {bName = d.bells[i-1].time; trans = true;}
+    if (bName.length == 1) {bName = 'Period ' + bName;}
+    classTime.setHours(parseInt(bTime.slice(0,2)));
+    classTime.setMinutes(parseInt(bTime.slice(3,5)));
+    classTime.setSeconds(0);
+    if (classTime > today) {break;}
+  }
+  var diffMs = (classTime - today);
+  var diffHrs = Math.floor((diffMs % 86400000) / 3600000); // hours
+  var diffMins = Math.floor(((diffMs % 86400000) % 3600000) / 60000); // minutes
+  var diffSecs = Math.floor((((diffMs % 86400000) % 3600000 % 60000) / 1000)); // seconds
+  if (trans) {
+    main.subtitle(bName + ' ends\n' +
+                diffHrs + 'h ' + diffMins + 'm ' + diffSecs + 's');
+  } else {
+    main.subtitle(bName + ' starts\n' +
+                diffHrs + 'h ' + diffMins + 'm ' + diffSecs + 's');
+  }
+};
+setInterval(getCountdown, 1000);
+
+
+//BELLTIMES
+var bellMenu = new UI.Menu({
+  sections: [{
+    title: 'Belltimes',
+    items: [{
+      title: 'Loading:'
+    }]
+  }]
+});
+
 var getBellTimes = function(data) {
   var items = [];
   
@@ -42,7 +102,7 @@ var getBellTimes = function(data) {
     //Changed bell times
     if (data.bellsAltered) {
       items.push({
-        title: 'Bell times changed',
+        title: 'Bells changed',
         subtitle: items.bellsAlteredReason
       });
     }
@@ -50,9 +110,7 @@ var getBellTimes = function(data) {
     for(var i = 0; i < data.bells.length; i++) {
       var title = data.bells[i].bell;
       var time = convertTime(data.bells[i].time);
-      if (title.length == 1) {
-        title = 'Period ' + title;
-      }
+      if (title.length == 1) {title = 'Period ' + title;}
       if (title != 'Transition') {
         items.push({
           title:title,
@@ -68,61 +126,11 @@ var getBellTimes = function(data) {
   return items;
 };
 
-
-
-//MAIN
-var d = Settings.data('data');
-
-var main = new UI.Card({
-  title: d.day + ' ' + d.week + d.weekType,
-  subtitle: 'Class starts in --:--:--',
-});
-load.hide();
-main.show();
-
-
-
-var getCountdown = function() {
-  var today = new Date();
-  var classTime = new Date();
-  var bName;
-  for (var i = 0; i < d.bells.length; i++) {
-    var bTime = d.bells[i].time;
-    bName = d.bells[i].bell;
-    if (bName.length == 1) {
-        bName = 'Period ' + bName;
-      }
-    if (bName != 'Transition') {
-      classTime.setHours(parseInt(bTime.slice(0,2)));
-      classTime.setMinutes(parseInt(bTime.slice(3,5)));
-      classTime.setSeconds(0);
-      if (classTime > today) {break;}
-    }
-  }
-  var diffMs = (classTime - today); // milliseconds between now & Christmas
-  var diffHrs = Math.round((diffMs % 86400000) / 3600000); // hours
-  var diffMins = Math.round(((diffMs % 86400000) % 3600000) / 60000); // minutes
-  var diffSecs = Math.round((((diffMs % 86400000) % 3600000 % 60000) / 1000)); // seconds
-  
-  main.subtitle(bName + ' starts in ' + diffHrs + ':' + diffMins + ':' + diffSecs + '.');
-};
-
-//BELLTIMES
-var bellMenu = new UI.Menu({
-  sections: [{
-    title: 'Belltimes',
-    items: [{
-      title: 'Loading:'
-    }]
-  }]
-});
-
 main.on('click', 'up', function(e) {
+  update();
   bellMenu.items(0, getBellTimes(d));
   bellMenu.show();
 });
-
-setInterval(getCountdown, 1000);
 
 main.on('click', 'select', function(e) {
   var wind = new UI.Window({
