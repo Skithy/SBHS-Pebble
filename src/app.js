@@ -21,6 +21,11 @@ var update = function() {
   );
 };
 
+//Pad 0s
+Number.prototype.pad = function() {
+    return ('0' + this).slice(-2);
+};
+
 //24h to 12h
 var convertTime = function(time) {
   var hour = parseInt(time.slice(0,2));
@@ -36,22 +41,56 @@ var convertTime = function(time) {
 };
 
 //MAIN
-var main = new UI.Card({
-  title: d.day + ' ' + d.week + d.weekType,
-  subtitle: 'Class starts\n' +
-            '--h --m --s',
-  status: {
-    separator: 'none',
-    color: 'white',
-    backgroundColor: 'black'
-  }
+var main = new UI.Window({
+    fullscreen: true,
+  });
+var size = main.size();
+
+var datefield = new UI.Text({
+  position: new Vector2(0, 0),
+  size: new Vector2(size.x, 30),
+  font: 'gothic-18',
+  text: 'Monday 1A',
+  textAlign: 'center'
 });
 
-main.on('show', function() {
-  update();
+var classfield = new UI.Text({
+  position: new Vector2(0, 30),
+  size: new Vector2(size.x, 30),
+  font: 'gothic-28',
+  text: 'Class',
+  textAlign: 'center'
 });
 
-main.show();
+var infield = new UI.Text({
+  position: new Vector2(0, 63),
+  size: new Vector2(size.x, 30),
+  font: 'gothic-18',
+  text: 'starts in',
+  textAlign: 'center'
+});
+
+var cdfield = new UI.Text({
+  position: new Vector2(0, 85),
+  size: new Vector2(size.x, 30),
+  font: 'gothic-28',
+  text: '--h --m --s',
+  textAlign: 'center'
+});
+
+var sbhsfield = new UI.Text({
+  position: new Vector2(0, size.y - 20),
+  size: new Vector2(size.x, 30),
+  font: 'gothic-14',
+  text: 'SBHS Timetable',
+  textAlign: 'left'
+});
+
+main.add(datefield);
+main.add(classfield);
+main.add(infield);
+main.add(cdfield);
+main.add(sbhsfield);
 
 var getCountdown = function() {
   var today = new Date();
@@ -60,29 +99,35 @@ var getCountdown = function() {
   classTime.setDate(parseInt(d.date.slice(8,10)));
   var bName = 'Class';
   var trans = false;
+  //Loop through bell times
   for (var i = 0; i < d.bells.length; i++) {
     var bTime = d.bells[i].time;
     bName = d.bells[i].bell;
     if (bName == 'Transition') {bName = d.bells[i-1].time; trans = true;}
+    if (bName == 'Roll Call') {bName = 'School';}
     if (bName.length == 1) {bName = 'Period ' + bName;}
     classTime.setHours(parseInt(bTime.slice(0,2)));
     classTime.setMinutes(parseInt(bTime.slice(3,5)));
     classTime.setSeconds(0);
     if (classTime > today) {break;}
   }
+  //Calculate time difference
   var diffMs = (classTime - today);
-  var diffHrs = Math.floor((diffMs % 86400000) / 3600000); // hours
-  var diffMins = Math.floor(((diffMs % 86400000) % 3600000) / 60000); // minutes
-  var diffSecs = Math.floor((((diffMs % 86400000) % 3600000 % 60000) / 1000)); // seconds
-  if (trans) {
-    main.subtitle(bName + ' ends\n' +
-                diffHrs + 'h ' + diffMins + 'm ' + diffSecs + 's');
-  } else {
-    main.subtitle(bName + ' starts\n' +
-                diffHrs + 'h ' + diffMins + 'm ' + diffSecs + 's');
-  }
+  var diffHrs = Math.floor((diffMs % 86400000) / 3600000).pad(); // hours
+  var diffMins = Math.floor(((diffMs % 86400000) % 3600000) / 60000).pad(); // minutes
+  var diffSecs = Math.floor((((diffMs % 86400000) % 3600000 % 60000) / 1000)).pad(); // seconds
+  datefield.text(d.day + ' ' + d.week + d.weekType);
+  classfield.text(bName);
+  if (trans) {infield.text('ends in');} else {infield.text('starts in');}
+  cdfield.text(diffHrs + 'h ' + diffMins + 'm ' + diffSecs + 's');
 };
-setInterval(getCountdown, 1000);
+
+main.on('show', function() {
+  update();
+  setInterval(getCountdown, 1000);
+});
+
+main.show();
 
 
 //BELLTIMES
@@ -92,7 +137,12 @@ var bellMenu = new UI.Menu({
     items: [{
       title: 'Loading:'
     }]
-  }]
+  }],
+  status: {
+    separator: 'none',
+    color: 'white',
+    backgroundColor: 'black'
+  }
 });
 
 var getBellTimes = function(data) {
@@ -132,20 +182,6 @@ main.on('click', 'up', function(e) {
   bellMenu.show();
 });
 
-main.on('click', 'select', function(e) {
-  var wind = new UI.Window({
-    fullscreen: true,
-  });
-  var textfield = new UI.TimeText({
-    position: new Vector2(0, 65),
-    size: new Vector2(144, 30),
-    font: 'gothic-24-bold',
-    text: '%M:%S',
-    textAlign: 'center'
-  });
-  wind.add(textfield);
-  wind.show();
-});
 
 main.on('click', 'down', function(e) {
   var card = new UI.Card();
