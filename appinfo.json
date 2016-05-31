@@ -3,7 +3,7 @@
     "capabilities": [
         "configurable"
     ],
-    "companyName": "Skithy",
+    "companyName": "SkithyStudio",
     "longName": "SBHS Timetable",
     "projectType": "pebblejs",
     "resources": {
@@ -32,14 +32,14 @@
         ]
     },
     "sdkVersion": "3",
-    "shortName": "SBHS Timetable",
+    "shortName": "SBHS Time",
     "targetPlatforms": [
         "aplite",
         "basalt"
     ],
     "uuid": "075c65c7-17d9-42a0-a1dd-a081355d1872",
     "versionCode": 1,
-    "versionLabel": "1.4",
+    "versionLabel": "2.1",
     "watchapp": {
         "hiddenApp": false,
         "watchface": false

@@ -22,8 +22,8 @@ var update = function() {
 };
 
 //Pad 0s
-Number.prototype.pad = function() {
-    return ('0' + this).slice(-2);
+var pad = function(num) {
+    return ('00' + num).slice(-2);
 };
 
 //24h to 12h
@@ -48,36 +48,34 @@ var size = main.size();
 
 var datefield = new UI.Text({
   position: new Vector2(0, 0),
-  size: new Vector2(size.x, 30),
-  font: 'gothic-18',
+  size: new Vector2(size.x, 25),
+  font: 'gothic-18-bold',
   text: 'Monday 1A',
-  textAlign: 'center'
+  textAlign: 'center',
+  color: 'black',
+  backgroundColor: 'white'
 });
-
 var classfield = new UI.Text({
-  position: new Vector2(0, 30),
+  position: new Vector2(0, 35),
   size: new Vector2(size.x, 30),
   font: 'gothic-28',
   text: 'Class',
   textAlign: 'center'
 });
-
 var infield = new UI.Text({
-  position: new Vector2(0, 63),
+  position: new Vector2(0, 68),
   size: new Vector2(size.x, 30),
   font: 'gothic-18',
   text: 'starts in',
   textAlign: 'center'
 });
-
 var cdfield = new UI.Text({
-  position: new Vector2(0, 85),
+  position: new Vector2(0, 90),
   size: new Vector2(size.x, 30),
   font: 'gothic-28',
   text: '--h --m --s',
   textAlign: 'center'
 });
-
 var sbhsfield = new UI.Text({
   position: new Vector2(0, size.y - 20),
   size: new Vector2(size.x, 30),
@@ -113,9 +111,9 @@ var getCountdown = function() {
   }
   //Calculate time difference
   var diffMs = (classTime - today);
-  var diffHrs = Math.floor((diffMs % 86400000) / 3600000).pad(); // hours
-  var diffMins = Math.floor(((diffMs % 86400000) % 3600000) / 60000).pad(); // minutes
-  var diffSecs = Math.floor((((diffMs % 86400000) % 3600000 % 60000) / 1000)).pad(); // seconds
+  var diffHrs = pad(Math.floor((diffMs % 86400000) / 3600000)); // hours
+  var diffMins = pad(Math.floor(((diffMs % 86400000) % 3600000) / 60000)); // minutes
+  var diffSecs = pad(Math.floor((((diffMs % 86400000) % 3600000 % 60000) / 1000))); // seconds
   datefield.text(d.day + ' ' + d.week + d.weekType);
   classfield.text(bName);
   if (trans) {infield.text('ends in');} else {infield.text('starts in');}
@@ -128,7 +126,6 @@ main.on('show', function() {
 });
 
 main.show();
-
 
 //BELLTIMES
 var bellMenu = new UI.Menu({
@@ -176,12 +173,88 @@ var getBellTimes = function(data) {
   return items;
 };
 
+//BELLTIMES2
+var bellTimes = new UI.Window({
+  fullscreen: true
+});
+var size = bellTimes.size();
+var titlefield = new UI.Text({
+  position: new Vector2(0, 0),
+  size: new Vector2(size.x, 25),
+  font: 'gothic-18-bold',
+  text: 'Belltimes',
+  textAlign: 'center',
+  color: 'black',
+  backgroundColor: 'white'
+});
+
+var namefield = new UI.Text({
+  position: new Vector2(0, 30),
+  size: new Vector2(size.x, 300),
+  font: 'gothic-24',
+  text: 'Bell times',
+  textAlign: 'left'
+});
+
+var timefield = new UI.Text({
+  position: new Vector2(0, 30),
+  size: new Vector2(size.x, 300),
+  font: 'gothic-24',
+  text: '--:--AM',
+  textAlign: 'right'
+  });
+
+bellTimes.add(namefield);
+bellTimes.add(timefield);
+bellTimes.add(titlefield);
+
+var displayBellTime = function(data) {
+  var bellList = [];
+  var timeList = [];
+  for(var i = 0; i < data.bells.length; i++) {
+    var title = data.bells[i].bell;
+    var time = convertTime(data.bells[i].time);
+    if (title.length == 1) {title = 'Period ' + title;}
+    if (title != 'Transition') {
+      bellList.push(title);
+      timeList.push(time);
+    }
+  }
+  namefield.text(' '+ bellList.join('\n '));
+  timefield.text(timeList.join(' \n') + ' ');
+};
+
+var scrollBellScreen = function(direction) {
+  var pos = namefield.position();
+  if (direction && pos.y < 20) {
+    pos.y += 30;
+  } 
+  if (!direction && pos.y > -80) {
+    pos.y -= 30;
+  }
+  namefield.animate('position', pos, 500);
+  timefield.animate('position', pos, 500);
+};
+
 main.on('click', 'up', function(e) {
   update();
   bellMenu.items(0, getBellTimes(d));
   bellMenu.show();
 });
 
+main.on('click', 'select', function(e) {
+  update();
+  displayBellTime(d);
+  bellTimes.show();
+});
+
+bellTimes.on('click', 'up', function(e) {
+  scrollBellScreen(true);
+});
+
+bellTimes.on('click', 'down', function(e) {
+  scrollBellScreen(false);
+});
 
 main.on('click', 'down', function(e) {
   var card = new UI.Card();
