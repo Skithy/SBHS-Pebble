@@ -4,6 +4,32 @@ var ajax = require('ajax');
 var Settings = require('settings');
 var d = Settings.data('data');
 
+var colourScheme = 'white';
+
+//subjects[week][day][period][name/room]
+var subjects = [
+  [[ ['Free'       ,'--' ], ['Maths'      ,'608'], ['Physics','602'], ['Free'       ,'--' ], ['English','401'] ], //Mon
+   [ ['Maths'      ,'103'], ['Engineering','505'], ['Maths'  ,'107'], ['Free'       ,'--' ], ['English','401'] ], //Tue
+   [ ['English'    ,'401'], ['Maths'      ,'107'], ['Physics','602'], ['Sport'      ,'--' ], ['Sport'  ,'--' ] ], //Wed
+   [ ['Free'       ,'--' ], ['Engineering','504'], ['Physics','602'], ['Free'       ,'--' ], ['Free'   ,'--' ] ], //Thu
+   [ ['Engineering','214'], ['Maths'      ,'108'], ['English','207'], ['Physics'    ,'602'], ['Free'   ,'--' ] ]  //Fri
+  ],
+  [[ ['Physics'    ,'602'], ['Maths'      ,'104'], ['Free'   ,'--' ], ['English'    ,'207'], ['Free'   ,'--' ] ], //Mon
+   [ ['Free'       ,'--' ], ['English'    ,'209'], ['Maths'  ,'105'], ['Engineering','505'], ['Maths'  ,'108'] ], //Tue
+   [ ['Physics'    ,'602'], ['Free'       ,'--' ], ['English','401'], ['Sport'      ,'--' ], ['Sport'  ,'--' ] ], //Wed
+   [ ['Maths'      ,'108'], ['Engineering','504'], ['Physics','704'], ['Free'       ,'--' ], ['Free'   ,'--' ] ], //Thu
+   [ ['Maths'      ,'104'], ['Free'       ,'--' ], ['Maths'  ,'104'], ['Engineering','504'], ['Physics','602'] ]  //Fri
+  ],
+  [[ ['Engineering','504'], ['Maths'      ,'105'], ['Physics','602'], ['Maths'      ,'608'], ['English','401'] ], //Mon
+   [ ['Engineering','504'], ['Maths'      ,'108'], ['Maths'  ,'603'], ['English'    ,'801'], ['Free'   ,'--' ] ], //Tue
+   [ ['Engineering','505'], ['Free'       ,'--' ], ['English','401'], ['Sport'      ,'--' ], ['Sport'  ,'--' ] ], //Wed
+   [ ['Free'       ,'--' ], ['Engineering','214'], ['Physics','602'], ['Free'       ,'--' ], ['Free'   ,'--' ] ], //Thu
+   [ ['Physics'    ,'602'], ['Maths'      ,'104'], ['English','507'], ['Engineering','504'], ['Free'   ,'--' ] ]  //Fri
+  ]
+];
+var dayDict = {'Monday':0, 'Tuesday':1, 'Wednesday':2, 'Thursday':3, 'Friday':4};
+var weekDict = {'A':0, 'B':1, 'C':2};
+
 //Update data
 var update = function() {
   ajax(
@@ -41,19 +67,21 @@ var convertTime = function(time) {
 };
 
 //MAIN
+//Setup
 var main = new UI.Window({
     fullscreen: true,
   });
 var size = main.size();
-
+var background = new UI.Rect({
+  position: new Vector2(0, 0),
+  size: size,
+});
 var datefield = new UI.Text({
   position: new Vector2(0, 0),
   size: new Vector2(size.x, 25),
   font: 'gothic-18-bold',
   text: 'Monday 1A',
   textAlign: 'center',
-  color: 'black',
-  backgroundColor: 'white'
 });
 var classfield = new UI.Text({
   position: new Vector2(0, 35),
@@ -63,47 +91,71 @@ var classfield = new UI.Text({
   textAlign: 'center'
 });
 var infield = new UI.Text({
-  position: new Vector2(0, 68),
+  position: new Vector2(0, 65),
   size: new Vector2(size.x, 30),
-  font: 'gothic-18',
+  font: 'gothic-24',
   text: 'starts in',
   textAlign: 'center'
 });
 var cdfield = new UI.Text({
-  position: new Vector2(0, 90),
+  position: new Vector2(0, 92),
   size: new Vector2(size.x, 30),
   font: 'gothic-28',
   text: '--h --m --s',
   textAlign: 'center'
 });
-var sbhsfield = new UI.Text({
+var roomfield = new UI.Text({
   position: new Vector2(0, size.y - 20),
   size: new Vector2(size.x, 30),
   font: 'gothic-14',
-  text: 'SBHS Timetable',
+  text: ' Room: --',
   textAlign: 'left'
 });
 
+if (colourScheme == 'white') {
+  background.backgroundColor('white');
+  datefield.color('white');
+  datefield.backgroundColor('black');
+  classfield.color('black');
+  infield.color('black');
+  cdfield.color('black');
+  roomfield.color('black');
+} else {
+  background.backgroundColor('black');
+  datefield.color('black');
+  datefield.backgroundColor('white');
+  classfield.color('white');
+  infield.color('white');
+  cdfield.color('white');
+  roomfield.color('white');
+}
+main.add(background);
 main.add(datefield);
 main.add(classfield);
 main.add(infield);
 main.add(cdfield);
-main.add(sbhsfield);
+main.add(roomfield);
 
+//Get countdown timer
 var getCountdown = function() {
+  var bName = 'Class';
+  var trans = false; //Whether transition bell
   var today = new Date();
   var classTime = new Date();
-  classTime.setMonth(parseInt(d.date.slice(5,7)));
+  classTime.setMonth(parseInt(d.date.slice(5,7)) - 1); //d.date = yyyy-mm-dd
   classTime.setDate(parseInt(d.date.slice(8,10)));
-  var bName = 'Class';
-  var trans = false;
   //Loop through bell times
   for (var i = 0; i < d.bells.length; i++) {
+    trans = false;
     var bTime = d.bells[i].time;
     bName = d.bells[i].bell;
-    if (bName == 'Transition') {bName = d.bells[i-1].time; trans = true;}
-    if (bName == 'Roll Call') {bName = 'School';}
-    if (bName.length == 1) {bName = 'Period ' + bName;}
+    if ((bName == 'Transition') || (bName == 'Lunch 1') || (bName == 'Recess') || (bName == 'End of Day')) {
+      bName = d.bells[i-1].bell;
+      trans = true;
+    }
+    if (bName == 'Roll Call') {
+      bName = 'School';
+    }
     classTime.setHours(parseInt(bTime.slice(0,2)));
     classTime.setMinutes(parseInt(bTime.slice(3,5)));
     classTime.setSeconds(0);
@@ -114,152 +166,82 @@ var getCountdown = function() {
   var diffHrs = pad(Math.floor((diffMs % 86400000) / 3600000)); // hours
   var diffMins = pad(Math.floor(((diffMs % 86400000) % 3600000) / 60000)); // minutes
   var diffSecs = pad(Math.floor((((diffMs % 86400000) % 3600000 % 60000) / 1000))); // seconds
+  var classDetails = subjects[weekDict[d.weekType]][dayDict[d.day]][parseInt(bName) - 1];
+  
   datefield.text(d.day + ' ' + d.week + d.weekType);
-  classfield.text(bName);
+  classfield.text(classDetails[0]);
   if (trans) {infield.text('ends in');} else {infield.text('starts in');}
-  cdfield.text(diffHrs + 'h ' + diffMins + 'm ' + diffSecs + 's');
+  if (diffHrs == '00') {
+    if (diffMins == '00') {
+      cdfield.text(diffSecs + 's');
+    } else {
+      cdfield.text(diffMins + 'm ' + diffSecs + 's');
+    }
+  } else {
+    cdfield.text(diffHrs + 'h ' + diffMins + 'm ' + diffSecs + 's');
+  }
+  roomfield.text(' Room: ' + classDetails[1]);
 };
+setInterval(getCountdown, 1000);
 
 main.on('show', function() {
   update();
-  setInterval(getCountdown, 1000);
 });
 
 main.show();
 
 //BELLTIMES
-var bellMenu = new UI.Menu({
+var bellTimes = new UI.Menu({
+  fullscreen: true,
   sections: [{
     title: 'Belltimes',
-    items: [{
-      title: 'Loading:'
-    }]
-  }],
-  status: {
-    separator: 'none',
-    color: 'white',
-    backgroundColor: 'black'
-  }
+    items: [{title: 'Loading...'}]
+  }]
 });
 
-var getBellTimes = function(data) {
-  var items = [];
-  
-  if (data.status == 'OK') {
-    //Changed bell times
-    if (data.bellsAltered) {
-      items.push({
-        title: 'Bells changed',
-        subtitle: items.bellsAlteredReason
-      });
-    }
-    //Get bell times
-    for(var i = 0; i < data.bells.length; i++) {
-      var title = data.bells[i].bell;
-      var time = convertTime(data.bells[i].time);
-      if (title.length == 1) {title = 'Period ' + title;}
-      if (title != 'Transition') {
-        items.push({
-          title:title,
-          subtitle:time
-        });
-      }
-    }
-  } else {
-      items.push({
-        title: 'No Bells Today'
-      });
-  }
-  return items;
-};
-
-//BELLTIMES2
-var bellTimes = new UI.Window({
-  fullscreen: true
-});
-var size = bellTimes.size();
-var titlefield = new UI.Text({
-  position: new Vector2(0, 0),
-  size: new Vector2(size.x, 25),
-  font: 'gothic-18-bold',
-  text: 'Belltimes',
-  textAlign: 'center',
-  color: 'black',
-  backgroundColor: 'white'
-});
-
-var namefield = new UI.Text({
-  position: new Vector2(0, 30),
-  size: new Vector2(size.x, 300),
-  font: 'gothic-24',
-  text: 'Bell times',
-  textAlign: 'left'
-});
-
-var timefield = new UI.Text({
-  position: new Vector2(0, 30),
-  size: new Vector2(size.x, 300),
-  font: 'gothic-24',
-  text: '--:--AM',
-  textAlign: 'right'
-  });
-
-bellTimes.add(namefield);
-bellTimes.add(timefield);
-bellTimes.add(titlefield);
-
-var displayBellTime = function(data) {
+var getBellTimes = function() {
   var bellList = [];
-  var timeList = [];
-  for(var i = 0; i < data.bells.length; i++) {
-    var title = data.bells[i].bell;
-    var time = convertTime(data.bells[i].time);
+  if (d.bellsAltered) {
+    bellList.push({title: 'Bells changed', subtitle: d.bellsAlteredReason});
+  }
+  for(var i = 0; i < d.bells.length; i++) {
+    var title = d.bells[i].bell;
+    var time = convertTime(d.bells[i].time);
     if (title.length == 1) {title = 'Period ' + title;}
     if (title != 'Transition') {
-      bellList.push(title);
-      timeList.push(time);
+      bellList.push({title: title, subtitle: time});
     }
   }
-  namefield.text(' '+ bellList.join('\n '));
-  timefield.text(timeList.join(' \n') + ' ');
+  return bellList;
 };
 
-var scrollBellScreen = function(direction) {
-  var pos = namefield.position();
-  if (direction && pos.y < 20) {
-    pos.y += 30;
-  } 
-  if (!direction && pos.y > -80) {
-    pos.y -= 30;
-  }
-  namefield.animate('position', pos, 500);
-  timefield.animate('position', pos, 500);
-};
+bellTimes.items(0,getBellTimes());
 
-main.on('click', 'up', function(e) {
-  update();
-  bellMenu.items(0, getBellTimes(d));
-  bellMenu.show();
+//Today's Timetable
+var timetable = new UI.Menu({
+  fullscreen: true,
+  sections: [{
+    title: 'Timetable',
+    items: [{title: 'Loading...'}]
+  }]
 });
 
-main.on('click', 'select', function(e) {
-  update();
-  displayBellTime(d);
+var getTimetable = function() {
+  var dayTimetable = subjects[weekDict[d.weekType]][dayDict[d.day]];
+  console.log(dayTimetable);
+  var timeList = [];
+  for (var i = 0; i < dayTimetable.length; i++) {
+    timeList.push({title: dayTimetable[i][0], subtitle: 'Room: ' + dayTimetable[i][1]});
+  }
+  return timeList;
+};
+
+timetable.items(0,getTimetable());
+
+main.on('click', 'up', function(e) {
   bellTimes.show();
 });
 
-bellTimes.on('click', 'up', function(e) {
-  scrollBellScreen(true);
-});
-
-bellTimes.on('click', 'down', function(e) {
-  scrollBellScreen(false);
-});
-
-main.on('click', 'down', function(e) {
-  var card = new UI.Card();
-  card.title('A Card');
-  card.subtitle('Is a Window');
-  card.body('The simplest window type in Pebble.js.');
-  card.show();
+main.on('click', 'select', function(e) {
+  timetable.show();
 });

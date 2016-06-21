@@ -1,7 +1,7 @@
 {
     "appKeys": {},
     "capabilities": [
-        "configurable"
+        ""
     ],
     "companyName": "SkithyStudio",
     "longName": "SBHS Timetable",
@@ -10,7 +10,6 @@
         "media": [
             {
                 "file": "images/menu_icon.png",
-                "menuIcon": true,
                 "name": "IMAGE_MENU_ICON",
                 "type": "bitmap"
             },
@@ -28,6 +27,12 @@
                 "file": "fonts/UbuntuMono-Regular.ttf",
                 "name": "MONO_FONT_14",
                 "type": "font"
+            },
+            {
+                "file": "images/clock3.png",
+                "menuIcon": true,
+                "name": "IMAGES_CLOCK3_PNG",
+                "type": "png"
             }
         ]
     },
@@ -39,7 +44,7 @@
     ],
     "uuid": "075c65c7-17d9-42a0-a1dd-a081355d1872",
     "versionCode": 1,
-    "versionLabel": "2.1",
+    "versionLabel": "2.2",
     "watchapp": {
         "hiddenApp": false,
         "watchface": false
